@@ -58,6 +58,13 @@ h1 { font-size: 2.1rem; margin: 0 0 4px; font-weight: 600; }
 }
 .btn-submit:hover { background: linear-gradient(135deg, rgba(0,200,100,0.4), rgba(0,150,80,0.4)); }
 .btn-submit:disabled { opacity: 0.55; cursor: not-allowed; }
+.btn-copy {
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.25);
+  color: var(--text);
+  margin-top: 8px;
+  display: none;
+}
 .calc { text-align: left; display: flex; flex-direction: column; gap: 11px; }
 .row { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
 .row label { font-size: 0.9rem; white-space: nowrap; }
@@ -115,8 +122,10 @@ h1 { font-size: 2.1rem; margin: 0 0 4px; font-weight: 600; }
   background: rgba(0,0,0,0.35); border: 1px dashed rgba(0,255,204,0.2);
   border-radius: 9px; padding: 7px 10px; max-height: 70px; overflow-y: auto; text-align: left;
 }
-.progress {
-  display: none; margin-top: 8px; font-size: 0.9rem; color: var(--accent); text-align: center;
+.msg {
+  display: none; margin-top: 10px; padding: 12px; border-radius: 12px;
+  background: rgba(0,255,204,0.08); border: 1px solid rgba(0,255,204,0.3);
+  color: var(--accent); font-size: 0.9rem; text-align: center; line-height: 1.4;
 }
 input[type=file] { display: none; }
 footer { color: var(--muted); margin-top: 28px; font-size: 0.8rem; }
@@ -192,7 +201,8 @@ footer { color: var(--muted); margin-top: 28px; font-size: 0.8rem; }
     <div class="price">Estimated Total: $<span id="price">0.00</span></div>
 
     <button class="btn btn-submit" id="submitBtn">📩 Submit Order</button>
-    <div class="progress" id="progressMsg"></div>
+    <button class="btn btn-copy" id="copyBtn">📋 Copy Order Details</button>
+    <div class="msg" id="msgBox"></div>
   </div>
 </div>
 
@@ -209,7 +219,7 @@ footer { color: var(--muted); margin-top: 28px; font-size: 0.8rem; }
   const MIN_PRINTABLE_MM = 18;
   const TARGET_SIZE_MM   = 55;
   const SCALE_STEP       = 0.1;
-  const ORDER_DEST       = atob('bWFzdGVyYXBvbGxvMTRAZ21haWwuY29t'); // hidden
+  const ORDER_DEST       = atob('bWFzdGVyYXBvbGxvMTRAZ21haWwuY29t'); // never shown on page
 
   const container = document.getElementById('viewer');
   const scene = new THREE.Scene();
@@ -242,6 +252,7 @@ footer { color: var(--muted); margin-top: 28px; font-size: 0.8rem; }
   let lastSafeScale = 1.0;
   let currentModelName = 'None';
   let selectedFile = null;
+  let lastOrderText = '';
 
   function animate() {
     requestAnimationFrame(animate);
@@ -256,6 +267,15 @@ footer { color: var(--muted); margin-top: 28px; font-size: 0.8rem; }
     el.scrollTop = el.scrollHeight;
   }
   function setStatus(t) { document.getElementById('status').textContent = t; }
+
+  function showMsg(text, isError) {
+    const box = document.getElementById('msgBox');
+    box.style.display = 'block';
+    box.style.background = isError ? 'rgba(255,80,80,0.12)' : 'rgba(0,255,204,0.08)';
+    box.style.borderColor = isError ? 'rgba(255,80,80,0.4)' : 'rgba(0,255,204,0.3)';
+    box.style.color = isError ? '#ff8a80' : 'var(--accent)';
+    box.innerHTML = text;
+  }
 
   function refreshViewer(scale) {
     if (!geometry || !mesh) return;
@@ -498,51 +518,8 @@ footer { color: var(--muted); margin-top: 28px; font-size: 0.8rem; }
     setStatus('🤖 Slicing the imported model…');
   });
 
-  // ========== SUBMIT (with graceful fallback) ==========
-  async function tryCreatePublicLink(file) {
-    // Attempt 1: file.io
-    try {
-      const form = new FormData();
-      form.append('file', file);
-      const res = await fetch('https://file.io/?expires=1w', { method: 'POST', body: form });
-      if (res.ok) {
-        const data = await res.json();
-        if (data.success && data.link) return data.link;
-      }
-    } catch (_) {}
-
-    // Attempt 2: 0x0.st
-    try {
-      const form = new FormData();
-      form.append('file', file);
-      const res = await fetch('https://0x0.st', { method: 'POST', body: form });
-      if (res.ok) {
-        const link = (await res.text()).trim();
-        if (link.startsWith('http')) return link;
-      }
-    } catch (_) {}
-
-    return null; // failed
-  }
-
-  document.getElementById('submitBtn').addEventListener('click', async function () {
-    if (!geometry || !selectedFile) {
-      alert('Please upload a model first.');
-      return;
-    }
-
-    const btn = this;
-    const progress = document.getElementById('progressMsg');
-    btn.disabled = true;
-    progress.style.display = 'block';
-    progress.textContent = 'Preparing order…';
-
-    let publicLink = null;
-    try {
-      progress.textContent = 'Trying to create a public download link…';
-      publicLink = await tryCreatePublicLink(selectedFile);
-    } catch (_) {}
-
+  // ========== BUILD ORDER TEXT ==========
+  function buildOrderText() {
     const scale = document.getElementById('scale').value;
     const infill = document.getElementById('infill').value;
     const material = document.getElementById('material').options[document.getElementById('material').selectedIndex].text;
@@ -555,21 +532,11 @@ footer { color: var(--muted); margin-top: 28px; font-size: 0.8rem; }
       ? document.getElementById('autoMsg').textContent
       : 'No auto-scale applied';
 
-    let linkSection = '';
-    if (publicLink) {
-      linkSection = `Public download link: ${publicLink}\n(Temporary – download soon)\n`;
-      progress.textContent = 'Public link created! Opening your email…';
-    } else {
-      linkSection = `⚠️ Could not create a public link automatically.\nPlease ATTACH the model file (${selectedFile.name}) to this email.\n`;
-      progress.textContent = 'Could not create link – please attach the file manually.';
-    }
-
-    const subject = encodeURIComponent('New 3D Print Order – ' + currentModelName);
-    const body = encodeURIComponent(
-`New print order from the website calculator
+    return `New 3D Print Order – Custom Awesome Printing
 
 Model name: ${currentModelName}
-${linkSection}
+File name: ${selectedFile ? selectedFile.name : 'unknown'}
+
 Scale applied: ×${scale}
 ${autoMsg}
 
@@ -585,19 +552,55 @@ Estimated total: $${price}
 
 ---
 Printer: Bambu Lab P1S
-`
-    );
+Please attach the original .stl / .obj file to this email.
+`;
+  }
 
-    // Always open the email so the order is never lost
+  // ========== SUBMIT ==========
+  document.getElementById('submitBtn').addEventListener('click', function () {
+    if (!geometry || !selectedFile) {
+      showMsg('Please upload a model first.', true);
+      return;
+    }
+
+    lastOrderText = buildOrderText();
+
+    const subject = encodeURIComponent('New 3D Print Order – ' + currentModelName);
+    const body = encodeURIComponent(lastOrderText);
+
+    // Try to open the email client
     window.location.href = 'mailto:' + ORDER_DEST + '?subject=' + subject + '&body=' + body;
 
-    log(publicLink ? 'Public link created and order prepared.' : 'Order prepared (please attach the file).');
-    setStatus('🤖 Order ready – check your email app');
+    // Show helpful message + Copy button (in case mailto is blocked)
+    document.getElementById('copyBtn').style.display = 'block';
+    showMsg(
+      'Your email app should open with the order details.<br><br>' +
+      '<strong>Important:</strong> Please attach the model file (' + selectedFile.name + ') to the email before sending.<br><br>' +
+      'If the email app did not open, use the <strong>Copy Order Details</strong> button below and paste it into a new email.',
+      false
+    );
 
-    setTimeout(() => {
-      btn.disabled = false;
-      progress.style.display = 'none';
-    }, 5000);
+    log('Order prepared. Attach the model file when sending.');
+    setStatus('🤖 Order ready – attach the file and send');
+  });
+
+  // ========== COPY FALLBACK ==========
+  document.getElementById('copyBtn').addEventListener('click', async function () {
+    if (!lastOrderText) lastOrderText = buildOrderText();
+    try {
+      await navigator.clipboard.writeText(lastOrderText);
+      showMsg('Order details copied! Paste them into a new email and attach the model file.', false);
+      log('Order details copied to clipboard.');
+    } catch (err) {
+      // Fallback for older browsers
+      const ta = document.createElement('textarea');
+      ta.value = lastOrderText;
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      document.body.removeChild(ta);
+      showMsg('Order details copied! Paste them into a new email and attach the model file.', false);
+    }
   });
 
   updatePrice();
