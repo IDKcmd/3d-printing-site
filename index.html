@@ -1,0 +1,610 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Custom Awesome Printing – P1S Order</title>
+<style>
+:root {
+  --bg: #030305;
+  --glass: rgba(255,255,255,0.04);
+  --border: rgba(255,255,255,0.15);
+  --highlight: rgba(255,255,255,0.3);
+  --text: #f5f5f7;
+  --muted: #98989f;
+  --accent: #00ffcc;
+  --glow: rgba(0,255,204,0.35);
+  --danger: #ff5252;
+}
+* { box-sizing: border-box; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, sans-serif;
+  background: var(--bg); color: var(--text); margin: 0; padding: 18px;
+  text-align: center; -webkit-font-smoothing: antialiased;
+}
+.liquid-bg { position: fixed; inset: 0; pointer-events: none; z-index: -1; filter: blur(80px); opacity: 0.55; }
+.orb { position: absolute; border-radius: 50%; animation: float 22s infinite alternate ease-in-out; }
+.orb-1 { width: 48vw; height: 48vw; background: rgba(0,140,255,0.2); top: -10%; left: -10%; }
+.orb-2 { width: 40vw; height: 40vw; background: rgba(0,255,204,0.16); top: 50%; right: -8%; animation-delay: -7s; }
+@keyframes float {
+  0% { transform: translate(0,0) scale(1); }
+  100% { transform: translate(-30px,40px) scale(1.05); }
+}
+h1 { font-size: 2.1rem; margin: 0 0 4px; font-weight: 600; }
+.sub { color: var(--muted); margin-bottom: 22px; font-size: 0.95rem; }
+.panel {
+  background: var(--glass); backdrop-filter: blur(40px) saturate(220%);
+  border: 1px solid var(--border); border-top: 1px solid var(--highlight);
+  border-radius: 20px; max-width: 640px; margin: 0 auto 16px; padding: 18px;
+  box-shadow: 0 20px 50px rgba(0,0,0,0.65);
+}
+#viewer {
+  width: 100%; height: 300px; background: rgba(6,6,10,0.7);
+  border-radius: 16px; position: relative; overflow: hidden; margin-bottom: 12px;
+}
+.btn {
+  display: block; width: 100%; padding: 12px; border-radius: 12px; font-weight: 600;
+  cursor: pointer; border: 1px solid var(--border); background: var(--glass); color: var(--text);
+  margin-bottom: 8px; transition: 0.2s; font-size: 0.95rem;
+}
+.btn:hover { border-color: rgba(255,255,255,0.4); }
+.btn-accent {
+  background: linear-gradient(135deg, rgba(0,255,204,0.2), rgba(0,174,66,0.2));
+  border-color: var(--accent); color: var(--accent);
+}
+.btn-submit {
+  background: linear-gradient(135deg, rgba(0,200,100,0.25), rgba(0,150,80,0.25));
+  border: 1px solid #00c864; color: #00e676; font-size: 1.05rem; margin-top: 10px;
+}
+.btn-submit:hover { background: linear-gradient(135deg, rgba(0,200,100,0.4), rgba(0,150,80,0.4)); }
+.btn-submit:disabled { opacity: 0.55; cursor: not-allowed; }
+.btn-copy {
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.25);
+  color: var(--text);
+  margin-top: 8px;
+  display: none;
+}
+.calc { text-align: left; display: flex; flex-direction: column; gap: 11px; }
+.row { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+.row label { font-size: 0.9rem; white-space: nowrap; }
+.row select, .row input[type=number], .row input[type=range] {
+  padding: 6px 10px; border-radius: 9px; border: 1px solid var(--border);
+  background: rgba(10,10,15,0.55); color: var(--text); outline: none; font-size: 0.9rem;
+}
+.row input[type=range] { flex: 1; }
+.scale-wrap { display: flex; align-items: center; gap: 6px; }
+.scale-wrap input[type=number] { width: 70px; text-align: center; -moz-appearance: textfield; }
+.scale-wrap input[type=number]::-webkit-outer-spin-button,
+.scale-wrap input[type=number]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+.scale-btn {
+  width: 42px; height: 42px; border-radius: 10px;
+  border: 1px solid rgba(0,255,204,0.45); background: rgba(0,255,204,0.12);
+  color: var(--accent); font-size: 1.4rem; font-weight: 700;
+  cursor: pointer; display: flex; align-items: center; justify-content: center;
+  user-select: none; -webkit-tap-highlight-color: transparent;
+}
+.scale-btn:active { background: rgba(0,255,204,0.3); transform: scale(0.94); }
+.tag {
+  background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 11px; padding: 10px 13px; text-align: center; color: var(--muted); font-size: 0.88rem;
+}
+.raw {
+  background: rgba(255,180,0,0.08); border: 1px solid rgba(255,180,0,0.3);
+  border-radius: 11px; padding: 9px 12px; text-align: center; color: #ffcc66; font-size: 0.85rem;
+}
+.auto {
+  background: rgba(0,255,204,0.1); border: 1px solid rgba(0,255,204,0.4);
+  border-radius: 11px; padding: 10px 12px; text-align: center; color: var(--accent); font-size: 0.88rem; font-weight: 500;
+}
+.warning-box {
+  display: none; background: rgba(255,50,50,0.15); border: 2px solid var(--danger);
+  border-radius: 14px; padding: 16px; text-align: center; color: #ff8a80;
+  font-weight: 600; font-size: 1.05rem; line-height: 1.4;
+}
+.warning-box button {
+  margin: 10px 6px 0; padding: 9px 18px; border-radius: 10px; border: none;
+  font-weight: 600; cursor: pointer; font-size: 0.95rem;
+}
+.btn-yes { background: var(--danger); color: white; }
+.btn-no  { background: #333; color: #eee; border: 1px solid #666; }
+.callout {
+  background: rgba(0,255,204,0.06); border: 1px solid rgba(0,255,204,0.3);
+  border-radius: 11px; padding: 11px; text-align: center; color: var(--accent); font-weight: 500; font-size: 0.9rem;
+}
+.price {
+  font-size: 1.5rem; font-weight: 700; color: var(--accent); text-align: center;
+  text-shadow: 0 0 18px var(--glow); margin-top: 2px;
+}
+.status { font-size: 0.92rem; color: var(--accent); font-weight: 600; text-align: center; }
+.log {
+  font-family: monospace; font-size: 0.75rem; color: var(--muted);
+  background: rgba(0,0,0,0.35); border: 1px dashed rgba(0,255,204,0.2);
+  border-radius: 9px; padding: 7px 10px; max-height: 70px; overflow-y: auto; text-align: left;
+}
+.msg {
+  display: none; margin-top: 10px; padding: 12px; border-radius: 12px;
+  background: rgba(0,255,204,0.08); border: 1px solid rgba(0,255,204,0.3);
+  color: var(--accent); font-size: 0.9rem; text-align: center; line-height: 1.4;
+}
+input[type=file] { display: none; }
+footer { color: var(--muted); margin-top: 28px; font-size: 0.8rem; }
+</style>
+</head>
+<body>
+<div class="liquid-bg">
+  <div class="orb orb-1"></div>
+  <div class="orb orb-2"></div>
+</div>
+
+<h1>Custom Awesome Printing</h1>
+<p class="sub">Bambu Lab P1S · Auto-scale · Order submission</p>
+
+<div class="panel">
+  <label for="fileInput" class="btn">📁 Choose .OBJ or .STL Model File</label>
+  <input type="file" id="fileInput" accept=".obj,.stl">
+
+  <div id="viewer"></div>
+
+  <button class="btn btn-accent" id="sliceBtn">⚡ START P1S SLICING ENGINE</button>
+
+  <div class="calc">
+    <div class="status" id="status">🤖 Waiting for a model…</div>
+    <div class="log" id="log">🧠 Upload a model to begin.</div>
+
+    <div class="row">
+      <label>Filament:</label>
+      <select id="material">
+        <option value="20" selected>Bambu Lab PLA Basic ($20/kg)</option>
+        <option value="25">Bambu Lab PLA Matte/Silk ($25/kg)</option>
+        <option value="22">Bambu Lab PETG ($22/kg)</option>
+      </select>
+    </div>
+    <div class="row">
+      <label>Layer Height:</label>
+      <select id="layerHeight">
+        <option value="0.12">0.12 mm</option>
+        <option value="0.20" selected>0.20 mm</option>
+        <option value="0.28">0.28 mm</option>
+      </select>
+    </div>
+    <div class="row">
+      <label>Infill %:</label>
+      <input type="range" id="infill" min="5" max="100" value="15" step="5">
+      <span id="infillLabel" style="color:var(--accent);font-weight:600;min-width:38px;">15%</span>
+    </div>
+
+    <div class="row">
+      <label>Scale:</label>
+      <div class="scale-wrap">
+        <button type="button" class="scale-btn" id="scaleDown">−</button>
+        <input type="number" id="scale" value="1.0" min="0.1" max="200" step="0.1">
+        <button type="button" class="scale-btn" id="scaleUp">+</button>
+      </div>
+    </div>
+
+    <div class="raw" id="rawSize">Raw model size (file units): —</div>
+    <div class="auto" id="autoMsg" style="display:none;"></div>
+
+    <div class="warning-box" id="oversizeWarning">
+      ⚠️ WARNING: This is too big for the Bambu Lab P1S (256×256×256 mm).<br>
+      Would you like this print to be printed in individual pieces?
+      <div>
+        <button class="btn-yes" id="btnYesPieces">Yes – split into pieces</button>
+        <button class="btn-no"  id="btnNoPieces">No – scale it back down</button>
+      </div>
+    </div>
+
+    <div class="tag" id="dims">📏 Final size: waiting…</div>
+    <div class="tag" id="weightTime">Weight & Time: —</div>
+    <div class="callout" id="sizeNote">Import a model first.</div>
+    <div class="price">Estimated Total: $<span id="price">0.00</span></div>
+
+    <button class="btn btn-submit" id="submitBtn">📩 Submit Order</button>
+    <button class="btn btn-copy" id="copyBtn">📋 Copy Order Details</button>
+    <div class="msg" id="msgBox"></div>
+  </div>
+</div>
+
+<footer>© 2026 Custom Awesome Printing</footer>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/OBJLoader.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/STLLoader.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+
+<script>
+(function () {
+  const P1S_MAX_MM       = 256;
+  const MIN_PRINTABLE_MM = 18;
+  const TARGET_SIZE_MM   = 55;
+  const SCALE_STEP       = 0.1;
+  const ORDER_DEST       = atob('bWFzdGVyYXBvbGxvMTRAZ21haWwuY29t'); // never shown on page
+
+  const container = document.getElementById('viewer');
+  const scene = new THREE.Scene();
+  scene.background = new THREE.Color(0x060609);
+
+  const camera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 0.1, 3000);
+  camera.position.set(0, 140, 200);
+
+  const renderer = new THREE.WebGLRenderer({ antialias: true });
+  renderer.setSize(container.clientWidth, container.clientHeight);
+  renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+  container.appendChild(renderer.domElement);
+
+  const controls = new THREE.OrbitControls(camera, renderer.domElement);
+  controls.enableDamping = true;
+
+  scene.add(new THREE.AmbientLight(0xffffff, 0.75));
+  const dir = new THREE.DirectionalLight(0xffffff, 0.9);
+  dir.position.set(80, 160, 120);
+  scene.add(dir);
+
+  const grid = new THREE.GridHelper(256, 32, 0x00ae42, 0x333333);
+  grid.position.y = -0.1;
+  scene.add(grid);
+
+  let mesh = null;
+  let geometry = null;
+  let minAllowedScale = 1.0;
+  let wasAutoScaled = false;
+  let lastSafeScale = 1.0;
+  let currentModelName = 'None';
+  let selectedFile = null;
+  let lastOrderText = '';
+
+  function animate() {
+    requestAnimationFrame(animate);
+    controls.update();
+    renderer.render(scene, camera);
+  }
+  animate();
+
+  function log(msg) {
+    const el = document.getElementById('log');
+    el.innerHTML += '<br>> ' + msg;
+    el.scrollTop = el.scrollHeight;
+  }
+  function setStatus(t) { document.getElementById('status').textContent = t; }
+
+  function showMsg(text, isError) {
+    const box = document.getElementById('msgBox');
+    box.style.display = 'block';
+    box.style.background = isError ? 'rgba(255,80,80,0.12)' : 'rgba(0,255,204,0.08)';
+    box.style.borderColor = isError ? 'rgba(255,80,80,0.4)' : 'rgba(0,255,204,0.3)';
+    box.style.color = isError ? '#ff8a80' : 'var(--accent)';
+    box.innerHTML = text;
+  }
+
+  function refreshViewer(scale) {
+    if (!geometry || !mesh) return;
+    const displayGeom = geometry.clone();
+    displayGeom.scale(scale, scale, scale);
+    displayGeom.center();
+    mesh.geometry.dispose();
+    mesh.geometry = displayGeom;
+    displayGeom.computeBoundingSphere();
+    const r = Math.max(displayGeom.boundingSphere.radius, 8);
+    camera.position.set(0, r * 2.3, r * 3.1);
+    controls.target.set(0, 0, 0);
+    controls.update();
+  }
+
+  function setScale(val) {
+    if (wasAutoScaled && val < minAllowedScale) {
+      val = minAllowedScale;
+      log('Cannot go below the auto-scale value (×' + minAllowedScale + ').');
+    }
+    val = Math.round(val * 10) / 10;
+    if (val < 0.1) val = 0.1;
+    document.getElementById('scale').value = val;
+    refreshViewer(val);
+    updatePrice();
+  }
+
+  function updatePrice() {
+    if (!geometry) {
+      document.getElementById('price').textContent = '0.00';
+      document.getElementById('dims').textContent = '📏 Final size: waiting…';
+      document.getElementById('weightTime').textContent = 'Weight & Time: —';
+      document.getElementById('rawSize').textContent = 'Raw model size (file units): —';
+      document.getElementById('sizeNote').textContent = 'Import a model first.';
+      document.getElementById('autoMsg').style.display = 'none';
+      document.getElementById('oversizeWarning').style.display = 'none';
+      return;
+    }
+
+    geometry.computeBoundingBox();
+    const raw = new THREE.Vector3();
+    geometry.boundingBox.getSize(raw);
+
+    document.getElementById('rawSize').textContent =
+      `Raw model size (file units): ${raw.x.toFixed(2)} × ${raw.y.toFixed(2)} × ${raw.z.toFixed(2)} mm`;
+
+    let scale = parseFloat(document.getElementById('scale').value) || 1.0;
+    if (wasAutoScaled && scale < minAllowedScale) {
+      scale = minAllowedScale;
+      document.getElementById('scale').value = minAllowedScale;
+    }
+
+    const size = raw.clone().multiplyScalar(scale);
+    const maxDim = Math.max(size.x, size.y, size.z);
+
+    const oversizeBox = document.getElementById('oversizeWarning');
+    if (maxDim > P1S_MAX_MM) oversizeBox.style.display = 'block';
+    else {
+      oversizeBox.style.display = 'none';
+      lastSafeScale = scale;
+    }
+
+    let infill = parseFloat(document.getElementById('infill').value) / 100 || 0.15;
+    const spoolPrice = parseFloat(document.getElementById('material').value) || 20;
+    const layerH = parseFloat(document.getElementById('layerHeight').value) || 0.2;
+
+    const volCm3 = (size.x * size.y * size.z) / 1000;
+    const adjusted = volCm3 * 0.45;
+    const shell = adjusted * 0.20;
+    const core  = adjusted * 0.80 * Math.max(0.05, Math.min(1, infill));
+    let weightG = (shell + core) * 1.24;
+    const maxXY = Math.max(size.x, size.y, 1);
+    const ratio = size.z / maxXY;
+    let support = 0.07;
+    if (ratio > 1.3 || size.z > 100) support = 0.20;
+    weightG *= (1 + support);
+    weightG = Math.max(weightG, 1.2);
+
+    const layers = Math.max(1, Math.ceil(size.z / layerH));
+    const timeMin = Math.max(10, Math.round(layers * 0.55 + weightG * 0.95));
+
+    const materialCost = weightG * (spoolPrice / 1000);
+    const energy = 0.12 * (timeMin / 60) * 0.15;
+    const machine = (700 / 3500) * (timeMin / 60);
+    let total = (materialCost + energy + machine + 1.60) * 1.05;
+    if (total < 2.20) total = 2.20;
+
+    const hCm = (size.z / 10).toFixed(1);
+    const wCm = (Math.max(size.x, size.y) / 10).toFixed(1);
+    document.getElementById('dims').textContent =
+      `📏 Final size: Height ~${hCm} cm  |  Width ~${wCm} cm  (max ${maxDim.toFixed(0)} mm)`;
+    document.getElementById('weightTime').textContent =
+      `Weight: ${weightG.toFixed(1)} g  |  Time: ~${timeMin} min`;
+    document.getElementById('price').textContent = total.toFixed(2);
+    document.getElementById('infillLabel').textContent = Math.round(infill * 100) + '%';
+
+    let note;
+    if (maxDim < 30) note = '🪙 Tiny – about the size of a coin.';
+    else if (maxDim < 60) note = '🥚 Small – roughly a chicken egg.';
+    else if (maxDim < 100) note = '⚾ Compact – baseball / mouse size.';
+    else if (maxDim < 150) note = '☕ Medium – coffee-mug height.';
+    else if (maxDim < 220) note = '🍌 Large – banana / book length.';
+    else if (maxDim <= P1S_MAX_MM) note = '📦 Large – still fits on the P1S.';
+    else note = '⚠️ Exceeds P1S build volume (256 mm).';
+    document.getElementById('sizeNote').textContent = note;
+  }
+
+  function autoScaleIfNeeded(geom) {
+    geom.computeBoundingBox();
+    const size = new THREE.Vector3();
+    geom.boundingBox.getSize(size);
+    const maxDim = Math.max(size.x, size.y, size.z);
+    const autoBox = document.getElementById('autoMsg');
+
+    if (maxDim < MIN_PRINTABLE_MM && maxDim > 0.001) {
+      const autoScale = Math.round((TARGET_SIZE_MM / maxDim) * 10) / 10;
+      minAllowedScale = autoScale;
+      wasAutoScaled = true;
+      lastSafeScale = autoScale;
+      document.getElementById('scale').value = autoScale;
+      autoBox.style.display = 'block';
+      autoBox.innerHTML = `⚡ Auto-scaled ×${autoScale}  (was ${maxDim.toFixed(2)} mm → now ~${TARGET_SIZE_MM} mm). You cannot scale below this.`;
+      log(`Model too small (${maxDim.toFixed(2)} mm). Auto-scaled ×${autoScale}.`);
+      return autoScale;
+    } else {
+      minAllowedScale = 0.1;
+      wasAutoScaled = false;
+      lastSafeScale = 1.0;
+      document.getElementById('scale').value = 1.0;
+      autoBox.style.display = 'none';
+      return 1.0;
+    }
+  }
+
+  function showModel(geom, name) {
+    if (mesh) scene.remove(mesh);
+    geometry = geom;
+    currentModelName = name || 'Imported model';
+
+    const appliedScale = autoScaleIfNeeded(geom);
+    const displayGeom = geom.clone();
+    displayGeom.scale(appliedScale, appliedScale, appliedScale);
+    displayGeom.center();
+
+    const mat = new THREE.MeshStandardMaterial({ color: 0x00ffcc, metalness: 0.15, roughness: 0.35 });
+    mesh = new THREE.Mesh(displayGeom, mat);
+    scene.add(mesh);
+
+    displayGeom.computeBoundingSphere();
+    const r = Math.max(displayGeom.boundingSphere.radius, 8);
+    camera.position.set(0, r * 2.3, r * 3.1);
+    controls.target.set(0, 0, 0);
+    controls.update();
+
+    setStatus('🤖 Model loaded: ' + currentModelName);
+    log('Geometry ready.');
+    updatePrice();
+  }
+
+  document.getElementById('scaleUp').addEventListener('click', () => {
+    setScale((parseFloat(document.getElementById('scale').value) || 1) + SCALE_STEP);
+  });
+  document.getElementById('scaleDown').addEventListener('click', () => {
+    setScale((parseFloat(document.getElementById('scale').value) || 1) - SCALE_STEP);
+  });
+  document.getElementById('scale').addEventListener('input', function () {
+    const val = parseFloat(this.value);
+    if (!isNaN(val) && val > 0) setScale(val);
+  });
+
+  document.getElementById('fileInput').addEventListener('change', function (e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    selectedFile = file;
+
+    log('Loading ' + file.name + ' (' + (file.size / 1024).toFixed(1) + ' KB)…');
+    const reader = new FileReader();
+    const lower = file.name.toLowerCase();
+
+    if (lower.endsWith('.stl')) {
+      reader.readAsArrayBuffer(file);
+      reader.onload = function (ev) {
+        try {
+          const loader = new THREE.STLLoader();
+          const geom = loader.parse(ev.target.result);
+          geom.center();
+          showModel(geom, file.name.replace(/\.[^/.]+$/, ''));
+        } catch (err) { log('STL error: ' + err.message); }
+      };
+    } else if (lower.endsWith('.obj')) {
+      reader.readAsText(file);
+      reader.onload = function (ev) {
+        try {
+          const loader = new THREE.OBJLoader();
+          const obj = loader.parse(ev.target.result);
+          let geom = null;
+          obj.traverse(c => {
+            if (c.isMesh && !geom) {
+              geom = c.geometry.clone();
+              geom.applyMatrix4(c.matrix);
+            }
+          });
+          if (geom) {
+            geom.center();
+            showModel(geom, file.name.replace(/\.[^/.]+$/, ''));
+          } else log('No mesh found in OBJ.');
+        } catch (err) { log('OBJ error: ' + err.message); }
+      };
+    } else {
+      log('Please choose a .stl or .obj file.');
+    }
+  });
+
+  document.getElementById('btnYesPieces').addEventListener('click', () => {
+    log('User chose to print in individual pieces.');
+    document.getElementById('oversizeWarning').style.display = 'none';
+    setStatus('🤖 Model will be prepared as separate pieces');
+  });
+  document.getElementById('btnNoPieces').addEventListener('click', () => {
+    if (!geometry) return;
+    geometry.computeBoundingBox();
+    const raw = new THREE.Vector3();
+    geometry.boundingBox.getSize(raw);
+    let safeScale = 250 / Math.max(raw.x, raw.y, raw.z);
+    if (wasAutoScaled && safeScale < minAllowedScale) safeScale = minAllowedScale;
+    safeScale = Math.round(safeScale * 10) / 10;
+    setScale(safeScale);
+    document.getElementById('oversizeWarning').style.display = 'none';
+    log('Scaled back to ×' + safeScale);
+    setStatus('🤖 Scaled back to fit the P1S');
+  });
+
+  document.getElementById('infill').addEventListener('input', updatePrice);
+  document.getElementById('material').addEventListener('change', updatePrice);
+  document.getElementById('layerHeight').addEventListener('change', updatePrice);
+
+  document.getElementById('sliceBtn').addEventListener('click', () => {
+    if (!geometry) { log('Import a model first.'); return; }
+    log('Slicing started.');
+    setStatus('🤖 Slicing the imported model…');
+  });
+
+  // ========== BUILD ORDER TEXT ==========
+  function buildOrderText() {
+    const scale = document.getElementById('scale').value;
+    const infill = document.getElementById('infill').value;
+    const material = document.getElementById('material').options[document.getElementById('material').selectedIndex].text;
+    const layerH = document.getElementById('layerHeight').value;
+    const dims = document.getElementById('dims').textContent;
+    const weightTime = document.getElementById('weightTime').textContent;
+    const price = document.getElementById('price').textContent;
+    const sizeNote = document.getElementById('sizeNote').textContent;
+    const autoMsg = document.getElementById('autoMsg').style.display !== 'none'
+      ? document.getElementById('autoMsg').textContent
+      : 'No auto-scale applied';
+
+    return `New 3D Print Order – Custom Awesome Printing
+
+Model name: ${currentModelName}
+File name: ${selectedFile ? selectedFile.name : 'unknown'}
+
+Scale applied: ×${scale}
+${autoMsg}
+
+Filament: ${material}
+Layer height: ${layerH} mm
+Infill: ${infill}%
+
+${dims}
+${weightTime}
+Size note: ${sizeNote}
+
+Estimated total: $${price}
+
+---
+Printer: Bambu Lab P1S
+Please attach the original .stl / .obj file to this email.
+`;
+  }
+
+  // ========== SUBMIT ==========
+  document.getElementById('submitBtn').addEventListener('click', function () {
+    if (!geometry || !selectedFile) {
+      showMsg('Please upload a model first.', true);
+      return;
+    }
+
+    lastOrderText = buildOrderText();
+
+    const subject = encodeURIComponent('New 3D Print Order – ' + currentModelName);
+    const body = encodeURIComponent(lastOrderText);
+
+    // Try to open the email client
+    window.location.href = 'mailto:' + ORDER_DEST + '?subject=' + subject + '&body=' + body;
+
+    // Show helpful message + Copy button (in case mailto is blocked)
+    document.getElementById('copyBtn').style.display = 'block';
+    showMsg(
+      'Your email app should open with the order details.<br><br>' +
+      '<strong>Important:</strong> Please attach the model file (' + selectedFile.name + ') to the email before sending.<br><br>' +
+      'If the email app did not open, use the <strong>Copy Order Details</strong> button below and paste it into a new email.',
+      false
+    );
+
+    log('Order prepared. Attach the model file when sending.');
+    setStatus('🤖 Order ready – attach the file and send');
+  });
+
+  // ========== COPY FALLBACK ==========
+  document.getElementById('copyBtn').addEventListener('click', async function () {
+    if (!lastOrderText) lastOrderText = buildOrderText();
+    try {
+      await navigator.clipboard.writeText(lastOrderText);
+      showMsg('Order details copied! Paste them into a new email and attach the model file.', false);
+      log('Order details copied to clipboard.');
+    } catch (err) {
+      // Fallback for older browsers
+      const ta = document.createElement('textarea');
+      ta.value = lastOrderText;
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      document.body.removeChild(ta);
+      showMsg('Order details copied! Paste them into a new email and attach the model file.', false);
+    }
+  });
+
+  updatePrice();
+})();
+</script>
+</body>
+</html>
